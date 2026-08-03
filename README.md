@@ -9,7 +9,7 @@ An unofficial, cloud-push Home Assistant integration for IoTrix energy devices. 
 - Device names, counts, IDs, and account topology are never hardcoded.
 - A driver capability registry maps a returned `driver` to known fields. Unknown drivers remain visible as devices without guessed entities.
 - The device list refreshes periodically. Realtime values arrive over one account WebSocket connection.
-- Hybrid inverter, BMS, and the virtual **IoTrix D18 Guard** are separate HA devices.
+- Every HA Device corresponds to a real cloud-returned IoTrix device. No virtual controller device is registered.
 
 Currently understood drivers:
 
@@ -32,21 +32,11 @@ Until this repository is accepted into the HACS default store:
 
 The access token is stored in Home Assistant's config entry storage. It is never included in diagnostics or logs. Do not paste tokens into GitHub issues.
 
-## D18 and battery guard
+## Manual D18 control
 
 The compatible inverter exposes **D18 Maximum Grid Current** as a writable `number` entity. No other IoTrix command is implemented.
 
-The HA-side D18 Guard:
-
-- trips from the selected **BMS current** (negative means discharge), never inverter battery current;
-- reduces D18 once using load-path power and preserves calculated PV headroom;
-- defaults to **disabled** to prevent double control with an existing ESP32 automation;
-- enforces a default 10-minute minimum write interval;
-- restores only after the BMS current is safe and actual grid-path demand stays below the limited D18 ceiling for 10 minutes;
-- verifies a restore for 10 minutes and can roll back immediately on renewed sustained overcurrent;
-- records requested → accepted → confirmed/failed events, sequence numbers, status, and JSON details in HA.
-
-All thresholds, observation windows, restore behavior, and the enable switch are configurable on the virtual D18 Guard device. A manual D18 change releases any guard-owned limit and records a `manual_confirmed` event.
+The integration never changes D18 automatically. A user-initiated write is serialized and considered successful only after the realtime stream reports the requested value.
 
 ## Home Assistant Energy dashboard
 
@@ -57,7 +47,7 @@ All thresholds, observation windows, restore behavior, and the enable switch are
 
 ## Safety
 
-This is an unofficial integration. Confirm limits against your inverter/BMS installation. Keep Guard disabled while another controller can write D18. Control is allow-listed to D18, requires cloud command acceptance plus realtime readback, and never embeds account credentials or device IDs in source code.
+This is an unofficial integration. Confirm limits against your inverter/BMS installation. Control is allow-listed to manual D18, requires cloud command acceptance plus realtime readback, and never embeds account credentials or device IDs in source code.
 
 ## Development
 

@@ -32,16 +32,12 @@
     "step": {
       "init": {
         "title": "IoTrix Cloud options",
-        "description": "Select the dynamically discovered inverter and BMS used by D18 Guard. With exactly one compatible pair, automatic selection is safe.",
+        "description": "Configure how often Home Assistant refreshes the cloud-owned device list. Realtime values continue over WebSocket.",
         "data": {
-          "device_refresh_interval": "Device discovery refresh interval",
-          "guard_hybrid_id": "D18 inverter",
-          "guard_bms_id": "BMS discharge source"
+          "device_refresh_interval": "Device discovery refresh interval"
         },
         "data_description": {
-          "device_refresh_interval": "Seconds between owned-device list refreshes. Realtime measurements continue over WebSocket.",
-          "guard_hybrid_id": "Only cloud devices whose driver exposes D18 are listed.",
-          "guard_bms_id": "Guard uses this BMS current; inverter battery current is never used for trip decisions."
+          "device_refresh_interval": "Seconds between owned-device list refreshes."
         }
       }
     }

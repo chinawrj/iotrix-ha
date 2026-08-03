@@ -14,14 +14,11 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import IoTrixApi, IoTrixApiError, IoTrixAuthError
 from .const import (
     CONF_DEVICE_REFRESH_INTERVAL,
-    CONF_GUARD_BMS_ID,
-    CONF_GUARD_HYBRID_ID,
     CONF_HOST,
     CONF_TOKEN,
     DEFAULT_DEVICE_REFRESH_INTERVAL,
     DOMAIN,
 )
-from .drivers import adapter_for
 from .models import IoTrixDevice, parse_devices
 
 
@@ -112,29 +109,12 @@ class IoTrixConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class IoTrixOptionsFlow(config_entries.OptionsFlow):
-    """Select the dynamically discovered guard pair and refresh interval."""
+    """Configure cloud device-discovery refresh behavior."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
-        try:
-            runtime = self.config_entry.runtime_data
-            devices = list(runtime.hub.devices.values())
-        except (AttributeError, RuntimeError):
-            _, _, devices = await _validate(self.hass, dict(self.config_entry.data))
-
-        def options(role: str) -> list[selector.SelectOptionDict]:
-            return [
-                selector.SelectOptionDict(
-                    value=device.device_id, label=f"{device.name} · {device.driver}"
-                )
-                for device in devices
-                if (adapter := adapter_for(device.driver)) is not None
-                and adapter.role == role
-                and (role != "hybrid" or adapter.d18)
-            ]
-
-        schema: dict[Any, Any] = {
+        schema = {
             vol.Required(
                 CONF_DEVICE_REFRESH_INTERVAL,
                 default=self.config_entry.options.get(
@@ -146,30 +126,4 @@ class IoTrixOptionsFlow(config_entries.OptionsFlow):
                 )
             )
         }
-        hybrid_options = options("hybrid")
-        bms_options = options("bms")
-        if hybrid_options:
-            existing = self.config_entry.options.get(CONF_GUARD_HYBRID_ID)
-            marker = (
-                vol.Optional(CONF_GUARD_HYBRID_ID, default=existing)
-                if existing is not None
-                else vol.Optional(CONF_GUARD_HYBRID_ID, default=hybrid_options[0]["value"])
-                if len(hybrid_options) == 1
-                else vol.Optional(CONF_GUARD_HYBRID_ID)
-            )
-            schema[marker] = selector.SelectSelector(
-                selector.SelectSelectorConfig(options=hybrid_options)
-            )
-        if bms_options:
-            existing = self.config_entry.options.get(CONF_GUARD_BMS_ID)
-            marker = (
-                vol.Optional(CONF_GUARD_BMS_ID, default=existing)
-                if existing is not None
-                else vol.Optional(CONF_GUARD_BMS_ID, default=bms_options[0]["value"])
-                if len(bms_options) == 1
-                else vol.Optional(CONF_GUARD_BMS_ID)
-            )
-            schema[marker] = selector.SelectSelector(
-                selector.SelectSelectorConfig(options=bms_options)
-            )
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema))

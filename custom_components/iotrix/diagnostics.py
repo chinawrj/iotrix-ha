@@ -22,18 +22,4 @@ async def async_get_config_entry_diagnostics(
             {"name": device.name, "driver": device.driver, "type": device.device_type}
             for device in runtime.hub.devices.values()
         ],
-        "guard": {
-            "enabled": bool(runtime.guard.params["enabled"]),
-            "pair_ready": runtime.guard.pair_ready,
-            "phase": runtime.guard.phase.value,
-            "status": runtime.guard.status,
-            "active": runtime.guard.active,
-            "owns_limit": runtime.guard.owns_limit,
-            "event_sequence": runtime.guard.event_sequence,
-            "last_event_type": (
-                runtime.guard.last_event.event_type
-                if runtime.guard.last_event is not None
-                else None
-            ),
-        },
     }

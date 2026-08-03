@@ -1,13 +1,10 @@
-"""IoTrix cloud and guard status binary sensors."""
+"""BMS status sensors for dynamically discovered IoTrix devices."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
@@ -15,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import IoTrixRuntimeData
 from .drivers import adapter_for
-from .entity import GuardEntity, IoTrixEntity
+from .entity import IoTrixEntity
 
 BMS_PROBLEM_FIELDS = {
     "temperature_1_high": "sts_temp1_over",
@@ -72,51 +69,6 @@ class BmsStateBinarySensor(IoTrixEntity, BinarySensorEntity):
             self.async_write_ha_state()
 
 
-class GuardBinarySensor(GuardEntity, BinarySensorEntity):
-    def __init__(
-        self,
-        entry_id: str,
-        guard: Any,
-        key: str,
-        name: str,
-        value: Any,
-        device_class: Any = None,
-    ) -> None:
-        super().__init__(entry_id, guard, key)
-        self._attr_name = name
-        self._value = value
-        self._attr_device_class = device_class
-
-    @property
-    def is_on(self) -> bool:
-        return bool(self._value())
-
-
-class CloudConnectedBinarySensor(GuardBinarySensor):
-    """Connectivity entity updated directly by the WebSocket hub."""
-
-    def __init__(self, entry_id: str, guard: Any) -> None:
-        super().__init__(
-            entry_id,
-            guard,
-            "cloud_connected",
-            "Cloud Connected",
-            lambda: guard.hub.connected,
-            BinarySensorDeviceClass.CONNECTIVITY,
-        )
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        self._remove_hub_listener: Any = None
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        self._remove_hub_listener = self.guard.hub.add_listener(None, self._handle_update)
-
-    async def async_will_remove_from_hass(self) -> None:
-        if self._remove_hub_listener is not None:
-            self._remove_hub_listener()
-        await super().async_will_remove_from_hass()
-
-
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -130,10 +82,7 @@ async def async_setup_entry(
             adapter = adapter_for(device.driver)
             if adapter is None or adapter.role != "bms":
                 continue
-            for problem, fields in (
-                (True, BMS_PROBLEM_FIELDS),
-                (False, BMS_ACTIVITY_FIELDS),
-            ):
+            for problem, fields in ((True, BMS_PROBLEM_FIELDS), (False, BMS_ACTIVITY_FIELDS)):
                 for key, field in fields.items():
                     marker = (device.device_id, key)
                     if marker not in known:
@@ -146,24 +95,3 @@ async def async_setup_entry(
 
     add_discovered()
     entry.async_on_unload(runtime.hub.add_device_listener(add_discovered))
-    async_add_entities(
-        [
-            CloudConnectedBinarySensor(entry.entry_id, runtime.guard),
-            GuardBinarySensor(
-                entry.entry_id,
-                runtime.guard,
-                "guard_active",
-                "Guard Active",
-                lambda: runtime.guard.active,
-                BinarySensorDeviceClass.SAFETY,
-            ),
-            GuardBinarySensor(
-                entry.entry_id,
-                runtime.guard,
-                "pair_ready",
-                "Control Pair Ready",
-                lambda: runtime.guard.pair_ready,
-                BinarySensorDeviceClass.CONNECTIVITY,
-            ),
-        ]
-    )

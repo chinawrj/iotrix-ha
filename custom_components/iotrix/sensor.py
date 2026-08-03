@@ -27,7 +27,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import IoTrixRuntimeData
 from .drivers import adapter_for
-from .entity import GuardEntity, IoTrixEntity
+from .entity import IoTrixEntity
 from .hub import numeric_value
 
 
@@ -409,41 +409,6 @@ class ZeroChargeEnergySensor(IoTrixEntity, SensorEntity):
         return 0.0
 
 
-class GuardSequenceSensor(GuardEntity, SensorEntity):
-    _attr_name = "Event Sequence"
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    def __init__(self, entry_id: str, guard: Any) -> None:
-        super().__init__(entry_id, guard, "event_sequence")
-
-    @property
-    def native_value(self) -> int:
-        return self.guard.event_sequence
-
-
-class GuardTextSensor(GuardEntity, SensorEntity):
-    """A text-valued entity on HA's sensor platform."""
-
-    def __init__(
-        self,
-        entry_id: str,
-        guard: Any,
-        key: str,
-        name: str,
-        value: Any,
-        diagnostic: bool = False,
-    ) -> None:
-        super().__init__(entry_id, guard, key)
-        self._attr_name = name
-        self._value = value
-        if diagnostic:
-            self._attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    @property
-    def native_value(self) -> str:
-        return str(self._value())
-
-
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -486,32 +451,3 @@ async def async_setup_entry(
 
     add_discovered()
     entry.async_on_unload(runtime.hub.add_device_listener(add_discovered))
-    async_add_entities(
-        [
-            GuardSequenceSensor(entry.entry_id, runtime.guard),
-            GuardTextSensor(
-                entry.entry_id,
-                runtime.guard,
-                "status",
-                "Status",
-                lambda: runtime.guard.status,
-            ),
-            GuardTextSensor(
-                entry.entry_id,
-                runtime.guard,
-                "phase",
-                "Phase",
-                lambda: runtime.guard.phase.value,
-                True,
-            ),
-            GuardTextSensor(
-                entry.entry_id,
-                runtime.guard,
-                "last_event_details",
-                "Last Event Details",
-                lambda: (
-                    runtime.guard.last_event.compact() if runtime.guard.last_event else "No events"
-                ),
-            ),
-        ]
-    )

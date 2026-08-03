@@ -32,16 +32,12 @@
     "step": {
       "init": {
         "title": "IoTrix 云端选项",
-        "description": "选择 D18 Guard 使用的动态发现混网机和 BMS。若账号中只有唯一兼容组合，自动选择是安全的。",
+        "description": "配置 Home Assistant 刷新云端账号设备列表的间隔；实时数据继续通过 WebSocket 推送。",
         "data": {
-          "device_refresh_interval": "设备发现刷新间隔",
-          "guard_hybrid_id": "D18 混网机",
-          "guard_bms_id": "BMS 放电数据源"
+          "device_refresh_interval": "设备发现刷新间隔"
         },
         "data_description": {
-          "device_refresh_interval": "重新获取账号设备列表的秒数；实时测量仍通过 WebSocket 推送。",
-          "guard_hybrid_id": "只列出驱动支持 D18 的云端设备。",
-          "guard_bms_id": "保护判断只使用该 BMS 电流，绝不使用一体机的电池电流。"
+          "device_refresh_interval": "重新获取账号设备列表的秒数。"
         }
       }
     }

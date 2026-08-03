@@ -13,16 +13,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import IoTrixApi, IoTrixApiError, IoTrixAuthError
 from .const import (
     CONF_DEVICE_REFRESH_INTERVAL,
-    CONF_GUARD_BMS_ID,
-    CONF_GUARD_HYBRID_ID,
     CONF_HOST,
     CONF_TOKEN,
     DEFAULT_DEVICE_REFRESH_INTERVAL,
     DOMAIN,
-    GUARD_DEVICE_SUFFIX,
     PLATFORMS,
 )
-from .guard import D18Guard
 from .hub import IoTrixHub
 
 
@@ -31,7 +27,6 @@ class IoTrixRuntimeData:
     """Runtime objects owned by one config entry."""
 
     hub: IoTrixHub
-    guard: D18Guard
     remove_device_listener: Any = None
 
 
@@ -55,14 +50,6 @@ def _register_devices(hass: HomeAssistant, entry: ConfigEntry, hub: IoTrixHub) -
             model=device.driver,
             sw_version=_device_firmware(device),
         )
-    registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, f"{entry.entry_id}:{GUARD_DEVICE_SUFFIX}")},
-        manufacturer="IoTrix HA",
-        name="IoTrix D18 Guard",
-        model="grid_path_v2_ha",
-        entry_type=dr.DeviceEntryType.SERVICE,
-    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -85,15 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryAuthFailed from err
     except IoTrixApiError as err:
         raise ConfigEntryNotReady from err
-    guard = D18Guard(
-        hass,
-        entry.entry_id,
-        hub,
-        entry.options.get(CONF_GUARD_HYBRID_ID),
-        entry.options.get(CONF_GUARD_BMS_ID),
-    )
-    await guard.async_setup()
-    runtime = IoTrixRuntimeData(hub=hub, guard=guard)
+    runtime = IoTrixRuntimeData(hub=hub)
     entry.runtime_data = runtime
 
     _register_devices(hass, entry, hub)
@@ -112,7 +91,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime: IoTrixRuntimeData = entry.runtime_data
     if runtime.remove_device_listener is not None:
         runtime.remove_device_listener()
-    await runtime.guard.async_shutdown()
     await runtime.hub.async_shutdown()
     return True
 

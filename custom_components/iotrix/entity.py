@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN, GUARD_DEVICE_SUFFIX
+from .const import DOMAIN
 from .hub import IoTrixHub
 from .models import IoTrixDevice
 
@@ -53,40 +52,6 @@ class IoTrixEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         self._remove_listener = self.hub.add_listener(self.device_id, self._handle_update)
-
-    async def async_will_remove_from_hass(self) -> None:
-        if self._remove_listener is not None:
-            self._remove_listener()
-
-    @callback
-    def _handle_update(self) -> None:
-        self.async_write_ha_state()
-
-
-class GuardEntity(Entity):
-    """Base class for the HA-side virtual D18 guard service."""
-
-    _attr_has_entity_name = True
-    _attr_should_poll = False
-
-    def __init__(self, entry_id: str, guard: Any, key: str) -> None:
-        self.guard = guard
-        self._attr_unique_id = f"{entry_id}_{GUARD_DEVICE_SUFFIX}_{key}"
-        self._entry_id = entry_id
-        self._remove_listener: Callable[[], None] | None = None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._entry_id}:{GUARD_DEVICE_SUFFIX}")},
-            manufacturer="IoTrix HA",
-            name="IoTrix D18 Guard",
-            model="grid_path_v2_ha",
-            entry_type=DeviceEntryType.SERVICE,
-        )
-
-    async def async_added_to_hass(self) -> None:
-        self._remove_listener = self.guard.add_listener(self._handle_update)
 
     async def async_will_remove_from_hass(self) -> None:
         if self._remove_listener is not None:
