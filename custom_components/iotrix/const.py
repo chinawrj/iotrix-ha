@@ -8,6 +8,7 @@ NAME = "IoTrix Cloud"
 CONF_HOST = "host"
 CONF_TOKEN = "token"
 CONF_DEVICE_REFRESH_INTERVAL = "device_refresh_interval"
+DEFAULT_HOST = "https://api.ea-1.iotrix.net"
 DEFAULT_DEVICE_REFRESH_INTERVAL = 300
 DEFAULT_WS_INTERVAL = 1
 

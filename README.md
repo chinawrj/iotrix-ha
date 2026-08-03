@@ -28,7 +28,7 @@ Until this repository is accepted into the HACS default store:
 2. Add `https://github.com/chinawrj/iotrix-ha` as an **Integration**.
 3. Install **IoTrix Cloud** and restart Home Assistant.
 4. Open Settings → Devices & services → Add integration → **IoTrix Cloud**.
-5. Enter the IoTrix API host and account access token.
+5. Paste the IoTrix account access token. The default regional API host normally needs no changes; edit it only for an account hosted in another region.
 
 The access token is stored in Home Assistant's config entry storage. It is never included in diagnostics or logs. Do not paste tokens into GitHub issues.
 

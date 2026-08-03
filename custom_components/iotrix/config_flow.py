@@ -17,9 +17,17 @@ from .const import (
     CONF_HOST,
     CONF_TOKEN,
     DEFAULT_DEVICE_REFRESH_INTERVAL,
+    DEFAULT_HOST,
     DOMAIN,
 )
 from .models import IoTrixDevice, parse_devices
+
+TOKEN_SELECTOR = selector.TextSelector(
+    selector.TextSelectorConfig(
+        type=selector.TextSelectorType.PASSWORD,
+        autocomplete="current-password",
+    )
+)
 
 
 async def _validate(
@@ -64,8 +72,8 @@ class IoTrixConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
         schema = vol.Schema(
             {
-                vol.Required(CONF_HOST, default="https://www.iotrix.cn"): str,
-                vol.Required(CONF_TOKEN): str,
+                vol.Required(CONF_HOST, default=DEFAULT_HOST): str,
+                vol.Required(CONF_TOKEN): TOKEN_SELECTOR,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -96,7 +104,7 @@ class IoTrixConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_update_reload_and_abort(self._reauth_entry, data_updates=data)
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
+            data_schema=vol.Schema({vol.Required(CONF_TOKEN): TOKEN_SELECTOR}),
             errors=errors,
         )
 

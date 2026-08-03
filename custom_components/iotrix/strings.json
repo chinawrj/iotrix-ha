@@ -4,10 +4,14 @@
     "step": {
       "user": {
         "title": "Connect to IoTrix Cloud",
-        "description": "Enter the IoTrix API host and an account access token. Devices are discovered from the cloud response; no device IDs are hardcoded.",
+        "description": "Paste the access token from your IoTrix account. The default regional API host normally needs no changes. Devices are discovered from the cloud response; no device IDs are hardcoded.",
         "data": {
           "host": "API host",
           "token": "Access token"
+        },
+        "data_description": {
+          "host": "IoTrix regional API endpoint. Change it only if your account uses another region.",
+          "token": "IoTrix account access token. It is stored in Home Assistant and excluded from logs and diagnostics."
         }
       },
       "reauth_confirm": {

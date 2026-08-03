@@ -4,10 +4,14 @@
     "step": {
       "user": {
         "title": "连接 IoTrix 云端",
-        "description": "请输入 IoTrix API 地址和账号访问令牌。设备由云端响应动态发现，不会写死任何设备 ID。",
+        "description": "请粘贴 IoTrix 账号的访问令牌。默认区域 API 地址通常无需修改；设备由云端响应动态发现，不会写死任何设备 ID。",
         "data": {
           "host": "API 地址",
           "token": "访问令牌"
+        },
+        "data_description": {
+          "host": "IoTrix 区域 API 地址。仅当账号属于其他区域时才需要修改。",
+          "token": "IoTrix 账号访问令牌。令牌保存在 Home Assistant 中，不会写入日志或诊断信息。"
         }
       },
       "reauth_confirm": {
