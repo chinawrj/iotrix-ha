@@ -1,12 +1,12 @@
 {
+  "domain": "iotrix",
+  "name": "IoTrix Cloud",
   "codeowners": ["@chinawrj"],
   "config_flow": true,
   "documentation": "https://github.com/chinawrj/iotrix-ha",
-  "domain": "iotrix",
   "integration_type": "hub",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/chinawrj/iotrix-ha/issues",
-  "name": "IoTrix Cloud",
   "requirements": [],
   "version": "0.1.0"
 }

@@ -509,9 +509,9 @@ async def async_setup_entry(
                 runtime.guard,
                 "last_event_details",
                 "Last Event Details",
-                lambda: runtime.guard.last_event.compact()
-                if runtime.guard.last_event
-                else "No events",
+                lambda: (
+                    runtime.guard.last_event.compact() if runtime.guard.last_event else "No events"
+                ),
             ),
         ]
     )

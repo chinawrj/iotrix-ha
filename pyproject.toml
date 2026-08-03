@@ -13,7 +13,7 @@ authors = [{name = "chinawrj"}]
 dependencies = ["aiohttp>=3.11"]
 
 [project.optional-dependencies]
-test = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff>=0.11"]
+test = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff==0.16.1"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
