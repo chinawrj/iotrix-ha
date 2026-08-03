@@ -1,0 +1,49 @@
+{
+  "title": "IoTrix 云端",
+  "config": {
+    "step": {
+      "user": {
+        "title": "连接 IoTrix 云端",
+        "description": "请输入 IoTrix API 地址和账号访问令牌。设备由云端响应动态发现，不会写死任何设备 ID。",
+        "data": {
+          "host": "API 地址",
+          "token": "访问令牌"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新连接 IoTrix 云端",
+        "description": "保存的令牌已失效，请输入新的访问令牌。",
+        "data": {
+          "token": "访问令牌"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接 IoTrix 云端",
+      "invalid_auth": "访问令牌无效",
+      "unknown": "发生未知错误"
+    },
+    "abort": {
+      "already_configured": "此 IoTrix 账号已经配置",
+      "reauth_successful": "IoTrix 云端已重新连接"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "IoTrix 云端选项",
+        "description": "选择 D18 Guard 使用的动态发现混网机和 BMS。若账号中只有唯一兼容组合，自动选择是安全的。",
+        "data": {
+          "device_refresh_interval": "设备发现刷新间隔",
+          "guard_hybrid_id": "D18 混网机",
+          "guard_bms_id": "BMS 放电数据源"
+        },
+        "data_description": {
+          "device_refresh_interval": "重新获取账号设备列表的秒数；实时测量仍通过 WebSocket 推送。",
+          "guard_hybrid_id": "只列出驱动支持 D18 的云端设备。",
+          "guard_bms_id": "保护判断只使用该 BMS 电流，绝不使用一体机的电池电流。"
+        }
+      }
+    }
+  }
+}

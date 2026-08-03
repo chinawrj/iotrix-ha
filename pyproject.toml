@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iotrix-ha"
+version = "0.1.0"
+description = "Unofficial IoTrix Cloud integration for Home Assistant"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{name = "chinawrj"}]
+dependencies = ["aiohttp>=3.11"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff>=0.11"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]

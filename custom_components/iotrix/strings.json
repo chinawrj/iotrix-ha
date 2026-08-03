@@ -1,0 +1,49 @@
+{
+  "title": "IoTrix Cloud",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to IoTrix Cloud",
+        "description": "Enter the IoTrix API host and an account access token. Devices are discovered from the cloud response; no device IDs are hardcoded.",
+        "data": {
+          "host": "API host",
+          "token": "Access token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect IoTrix Cloud",
+        "description": "The saved token was rejected. Enter a replacement access token.",
+        "data": {
+          "token": "Access token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to IoTrix Cloud",
+      "invalid_auth": "The access token was rejected",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This IoTrix account is already configured",
+      "reauth_successful": "IoTrix Cloud was reconnected"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "IoTrix Cloud options",
+        "description": "Select the dynamically discovered inverter and BMS used by D18 Guard. With exactly one compatible pair, automatic selection is safe.",
+        "data": {
+          "device_refresh_interval": "Device discovery refresh interval",
+          "guard_hybrid_id": "D18 inverter",
+          "guard_bms_id": "BMS discharge source"
+        },
+        "data_description": {
+          "device_refresh_interval": "Seconds between owned-device list refreshes. Realtime measurements continue over WebSocket.",
+          "guard_hybrid_id": "Only cloud devices whose driver exposes D18 are listed.",
+          "guard_bms_id": "Guard uses this BMS current; inverter battery current is never used for trip decisions."
+        }
+      }
+    }
+  }
+}
