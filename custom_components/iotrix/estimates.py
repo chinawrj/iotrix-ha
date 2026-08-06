@@ -5,6 +5,12 @@ from __future__ import annotations
 NOMINAL_BATTERY_VOLTAGE = 51.2
 
 
+def remaining_capacity_ah(total_capacity_ah: float, state_of_charge: float) -> float:
+    """Derive remaining amp-hours from total capacity and BMS state of charge."""
+    bounded_soc = min(100.0, max(0.0, state_of_charge))
+    return total_capacity_ah * bounded_soc / 100.0
+
+
 def estimated_charge_capacity_ah(
     cycle_capacity_ah: float,
     remaining_capacity_ah: float,
