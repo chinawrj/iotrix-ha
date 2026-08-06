@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -28,7 +29,17 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import IoTrixRuntimeData
 from .drivers import adapter_for
 from .entity import IoTrixEntity
+from .estimates import (
+    NOMINAL_BATTERY_VOLTAGE,
+    estimated_charge_capacity_ah,
+    estimated_charge_energy_kwh,
+)
 from .hub import numeric_value
+
+ATTR_BASELINE_CYCLE_CAPACITY = "baseline_cycle_capacity_ah"
+ATTR_BASELINE_REMAINING_CAPACITY = "baseline_remaining_capacity_ah"
+ATTR_ESTIMATED_CHARGE_CAPACITY = "estimated_charge_capacity_ah"
+ATTR_NOMINAL_VOLTAGE = "nominal_voltage"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -394,19 +405,78 @@ class IoTrixTextValueSensor(IoTrixEntity, SensorEntity):
             self.async_write_ha_state()
 
 
-class ZeroChargeEnergySensor(IoTrixEntity, SensorEntity):
-    _attr_name = "Charge Energy Total Placeholder"
+class EstimatedChargeEnergySensor(IoTrixEntity, RestoreSensor):
+    """Upgrade the existing zero placeholder to an estimated charge meter."""
+
+    _attr_name = "Estimated Charge Energy Total"
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_icon = "mdi:battery-arrow-up-outline"
+    _attr_icon = "mdi:battery-arrow-up"
+    _attr_native_value: float | None = None
 
     def __init__(self, hub: Any, device: Any) -> None:
+        # Preserve the original unique ID so existing Energy preferences keep working.
         super().__init__(hub, device, "charge_energy_zero_placeholder")
+        self._baseline_cycle_capacity_ah: float | None = None
+        self._baseline_remaining_capacity_ah: float | None = None
+        self._estimated_charge_capacity_ah: float | None = None
 
     @property
-    def native_value(self) -> float:
-        return 0.0
+    def extra_state_attributes(self) -> dict[str, float]:
+        attributes = {ATTR_NOMINAL_VOLTAGE: NOMINAL_BATTERY_VOLTAGE}
+        if self._baseline_cycle_capacity_ah is not None:
+            attributes[ATTR_BASELINE_CYCLE_CAPACITY] = self._baseline_cycle_capacity_ah
+        if self._baseline_remaining_capacity_ah is not None:
+            attributes[ATTR_BASELINE_REMAINING_CAPACITY] = self._baseline_remaining_capacity_ah
+        if self._estimated_charge_capacity_ah is not None:
+            attributes[ATTR_ESTIMATED_CHARGE_CAPACITY] = self._estimated_charge_capacity_ah
+        return attributes
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if last_state := await self.async_get_last_state():
+            self._baseline_cycle_capacity_ah = numeric_value(
+                last_state.attributes.get(ATTR_BASELINE_CYCLE_CAPACITY)
+            )
+            self._baseline_remaining_capacity_ah = numeric_value(
+                last_state.attributes.get(ATTR_BASELINE_REMAINING_CAPACITY)
+            )
+        self._update_estimate()
+
+    @callback
+    def _handle_update(self) -> None:
+        previous = (self._attr_native_value, self._estimated_charge_capacity_ah)
+        self._update_estimate()
+        if previous != (self._attr_native_value, self._estimated_charge_capacity_ah):
+            self.async_write_ha_state()
+
+    def _update_estimate(self) -> None:
+        cycle_capacity_ah = self.hub.numeric(self.device_id, "cycle_capacity")
+        remaining_capacity_ah = self.hub.numeric(self.device_id, "real_capacity")
+        if cycle_capacity_ah is None or remaining_capacity_ah is None:
+            return
+        if self._baseline_cycle_capacity_ah is None or self._baseline_remaining_capacity_ah is None:
+            self._baseline_cycle_capacity_ah = cycle_capacity_ah
+            self._baseline_remaining_capacity_ah = remaining_capacity_ah
+        self._estimated_charge_capacity_ah = round(
+            estimated_charge_capacity_ah(
+                cycle_capacity_ah,
+                remaining_capacity_ah,
+                self._baseline_cycle_capacity_ah,
+                self._baseline_remaining_capacity_ah,
+            ),
+            3,
+        )
+        self._attr_native_value = round(
+            estimated_charge_energy_kwh(
+                cycle_capacity_ah,
+                remaining_capacity_ah,
+                self._baseline_cycle_capacity_ah,
+                self._baseline_remaining_capacity_ah,
+            ),
+            4,
+        )
 
 
 async def async_setup_entry(
@@ -445,7 +515,7 @@ async def async_setup_entry(
                 and (marker := (device.device_id, "charge_energy_zero_placeholder")) not in known
             ):
                 known.add(marker)
-                entities.append(ZeroChargeEnergySensor(runtime.hub, device))
+                entities.append(EstimatedChargeEnergySensor(runtime.hub, device))
         if entities:
             async_add_entities(entities)
 

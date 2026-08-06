@@ -12,6 +12,7 @@ from aiohttp import (
     ClientResponseError,
     ClientSession,
     ClientWebSocketResponse,
+    WSServerHandshakeError,
 )
 
 from .const import D18_COMMAND, DEFAULT_WS_INTERVAL
@@ -139,6 +140,12 @@ class IoTrixApi:
                 timeout=20,
                 max_msg_size=4 * 1024 * 1024,
             )
+        except WSServerHandshakeError as err:
+            if err.status in {401, 403}:
+                raise IoTrixAuthError("IoTrix authentication failed") from err
+            raise IoTrixApiError(
+                f"IoTrix WebSocket connection failed: {type(err).__name__}"
+            ) from err
         except (ClientError, TimeoutError) as err:
             raise IoTrixApiError(
                 f"IoTrix WebSocket connection failed: {type(err).__name__}"

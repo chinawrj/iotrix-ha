@@ -42,8 +42,9 @@ The integration never changes D18 automatically. A user-initiated write is seria
 
 - BMS State of Charge uses `%`, battery device class, and measurement state class.
 - Charge/discharge daily energy and estimated cumulative cycle energy use the energy device class.
-- **Charge Energy Total Placeholder** is a deliberate constant `0 kWh` total-increasing sensor for installations that need a valid charged-energy statistic before a true cumulative source is available.
+- The original **Charge Energy Total Placeholder** unique ID is retained for compatibility, but the entity now reports estimated cumulative charge energy so existing Energy Dashboard preferences do not need migration.
 - Estimated cycle energy is `cycle_capacity (Ah) × 51.2 V ÷ 1000`. It is an estimate, while the original cycle capacity remains available in Ah.
+- Estimated charge energy starts at zero when first added and uses capacity conservation: `(cycle_capacity - baseline_cycle_capacity) + (remaining_capacity - baseline_remaining_capacity)`, converted at 51.2 V. A decrease in remaining capacity is therefore subtracted naturally.
 
 ## Safety
 
