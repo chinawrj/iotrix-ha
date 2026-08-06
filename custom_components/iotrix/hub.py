@@ -11,7 +11,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from typing import Any
 
-from .api import IoTrixApi, IoTrixApiError, iter_json_messages
+from .api import IoTrixApi, IoTrixApiError, IoTrixAuthError, iter_json_messages
 from .const import D18_FIELD
 from .drivers import adapter_for
 from .models import IoTrixDevice, parse_devices
@@ -20,6 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 StateListener = Callable[[], None]
 DeviceListener = Callable[[], None]
+AuthFailedCallback = Callable[[], None]
 
 
 def numeric_value(value: Any) -> float | None:
@@ -36,7 +37,12 @@ def numeric_value(value: Any) -> float | None:
 class IoTrixHub:
     """Own the cloud connection for one IoTrix account config entry."""
 
-    def __init__(self, api: IoTrixApi, refresh_interval: int = 300) -> None:
+    def __init__(
+        self,
+        api: IoTrixApi,
+        refresh_interval: int = 300,
+        auth_failed_callback: AuthFailedCallback | None = None,
+    ) -> None:
         self.api = api
         self.refresh_interval = max(60, refresh_interval)
         self.devices: dict[str, IoTrixDevice] = {}
@@ -48,6 +54,8 @@ class IoTrixHub:
         self._device_listeners: set[DeviceListener] = set()
         self._tasks: set[asyncio.Task[Any]] = set()
         self._stop = asyncio.Event()
+        self._auth_failed_callback = auth_failed_callback
+        self._auth_failure_reported = False
         self._ws = None
         self._d18_lock = asyncio.Lock()
         self._value_waiters: dict[tuple[str, str], list[tuple[float, asyncio.Future[float]]]] = (
@@ -97,6 +105,9 @@ class IoTrixHub:
                 changed = await self.async_refresh_devices()
                 if changed and self._ws is not None:
                     await self._ws.close()
+            except IoTrixAuthError:
+                self._handle_auth_failure()
+                return
             except IoTrixApiError as err:
                 _LOGGER.warning("IoTrix device discovery refresh failed: %s", err)
 
@@ -114,6 +125,9 @@ class IoTrixHub:
                     self._process_payload(payload)
             except asyncio.CancelledError:
                 raise
+            except IoTrixAuthError:
+                self._handle_auth_failure()
+                return
             except IoTrixApiError as err:
                 _LOGGER.warning("IoTrix realtime connection unavailable: %s", err)
             finally:
@@ -128,6 +142,15 @@ class IoTrixHub:
                 return
             except TimeoutError:
                 delay = min(60.0, delay * 2.0)
+
+    def _handle_auth_failure(self) -> None:
+        """Start Home Assistant reauthentication once for this runtime."""
+        if self._auth_failure_reported:
+            return
+        self._auth_failure_reported = True
+        _LOGGER.warning("IoTrix authentication failed; starting reauthentication")
+        if self._auth_failed_callback is not None:
+            self._auth_failed_callback()
 
     def _subscription_payload(self) -> dict[str, Any]:
         args: list[dict[str, Any]] = []

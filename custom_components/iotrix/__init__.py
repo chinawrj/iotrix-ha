@@ -65,7 +65,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data.get(CONF_DEVICE_REFRESH_INTERVAL, DEFAULT_DEVICE_REFRESH_INTERVAL),
         )
     )
-    hub = IoTrixHub(api, refresh_interval)
+    hub = IoTrixHub(
+        api,
+        refresh_interval,
+        auth_failed_callback=lambda: entry.async_start_reauth(hass),
+    )
     try:
         await hub.async_setup()
     except IoTrixAuthError as err:

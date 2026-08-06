@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -39,3 +40,17 @@ def test_only_d18_command_shape_is_emitted() -> None:
             },
         )
     ]
+
+
+def test_websocket_unauthorized_handshake_is_an_auth_error() -> None:
+    session = AsyncMock()
+    session.ws_connect.side_effect = api_module.WSServerHandshakeError(
+        None,
+        (),
+        status=401,
+        message="Unauthorized",
+    )
+    api = api_module.IoTrixApi(session, "https://api.example.test", "not-a-real-token")
+
+    with pytest.raises(api_module.IoTrixAuthError):
+        asyncio.run(api.async_connect_websocket())

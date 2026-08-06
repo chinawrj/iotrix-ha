@@ -51,11 +51,13 @@ class IoTrixEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
         self._remove_listener = self.hub.add_listener(self.device_id, self._handle_update)
 
     async def async_will_remove_from_hass(self) -> None:
         if self._remove_listener is not None:
             self._remove_listener()
+        await super().async_will_remove_from_hass()
 
     @callback
     def _handle_update(self) -> None:
