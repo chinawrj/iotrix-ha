@@ -33,13 +33,16 @@ from .estimates import (
     NOMINAL_BATTERY_VOLTAGE,
     estimated_charge_capacity_ah,
     estimated_charge_energy_kwh,
+    remaining_capacity_ah,
 )
 from .hub import numeric_value
 
 ATTR_BASELINE_CYCLE_CAPACITY = "baseline_cycle_capacity_ah"
 ATTR_BASELINE_REMAINING_CAPACITY = "baseline_remaining_capacity_ah"
 ATTR_ESTIMATED_CHARGE_CAPACITY = "estimated_charge_capacity_ah"
+ATTR_ESTIMATOR_VERSION = "estimator_version"
 ATTR_NOMINAL_VOLTAGE = "nominal_voltage"
+ESTIMATOR_VERSION = 2
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -356,6 +359,14 @@ class IoTrixSensor(IoTrixEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
+        if self.entity_description.key == "real_capacity":
+            total_capacity_ah = self.hub.numeric(self.device_id, "real_capacity")
+            if total_capacity_ah is None:
+                total_capacity_ah = self.hub.numeric(self.device_id, "rated_capacity")
+            state_of_charge = self.hub.numeric(self.device_id, "soc")
+            if total_capacity_ah is None or state_of_charge is None:
+                return None
+            return round(remaining_capacity_ah(total_capacity_ah, state_of_charge), 4)
         value = numeric_value(self.hub.value(self.device_id, self.entity_description.field))
         return None if value is None else round(value * self.entity_description.multiplier, 4)
 
@@ -423,8 +434,11 @@ class EstimatedChargeEnergySensor(IoTrixEntity, RestoreSensor):
         self._estimated_charge_capacity_ah: float | None = None
 
     @property
-    def extra_state_attributes(self) -> dict[str, float]:
-        attributes = {ATTR_NOMINAL_VOLTAGE: NOMINAL_BATTERY_VOLTAGE}
+    def extra_state_attributes(self) -> dict[str, float | int]:
+        attributes: dict[str, float | int] = {
+            ATTR_NOMINAL_VOLTAGE: NOMINAL_BATTERY_VOLTAGE,
+            ATTR_ESTIMATOR_VERSION: ESTIMATOR_VERSION,
+        }
         if self._baseline_cycle_capacity_ah is not None:
             attributes[ATTR_BASELINE_CYCLE_CAPACITY] = self._baseline_cycle_capacity_ah
         if self._baseline_remaining_capacity_ah is not None:
@@ -436,12 +450,13 @@ class EstimatedChargeEnergySensor(IoTrixEntity, RestoreSensor):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         if last_state := await self.async_get_last_state():
-            self._baseline_cycle_capacity_ah = numeric_value(
-                last_state.attributes.get(ATTR_BASELINE_CYCLE_CAPACITY)
-            )
-            self._baseline_remaining_capacity_ah = numeric_value(
-                last_state.attributes.get(ATTR_BASELINE_REMAINING_CAPACITY)
-            )
+            if last_state.attributes.get(ATTR_ESTIMATOR_VERSION) == ESTIMATOR_VERSION:
+                self._baseline_cycle_capacity_ah = numeric_value(
+                    last_state.attributes.get(ATTR_BASELINE_CYCLE_CAPACITY)
+                )
+                self._baseline_remaining_capacity_ah = numeric_value(
+                    last_state.attributes.get(ATTR_BASELINE_REMAINING_CAPACITY)
+                )
         self._update_estimate()
 
     @callback
@@ -453,16 +468,20 @@ class EstimatedChargeEnergySensor(IoTrixEntity, RestoreSensor):
 
     def _update_estimate(self) -> None:
         cycle_capacity_ah = self.hub.numeric(self.device_id, "cycle_capacity")
-        remaining_capacity_ah = self.hub.numeric(self.device_id, "real_capacity")
-        if cycle_capacity_ah is None or remaining_capacity_ah is None:
+        total_capacity_ah = self.hub.numeric(self.device_id, "real_capacity")
+        if total_capacity_ah is None:
+            total_capacity_ah = self.hub.numeric(self.device_id, "rated_capacity")
+        state_of_charge = self.hub.numeric(self.device_id, "soc")
+        if cycle_capacity_ah is None or total_capacity_ah is None or state_of_charge is None:
             return
+        current_remaining_capacity_ah = remaining_capacity_ah(total_capacity_ah, state_of_charge)
         if self._baseline_cycle_capacity_ah is None or self._baseline_remaining_capacity_ah is None:
             self._baseline_cycle_capacity_ah = cycle_capacity_ah
-            self._baseline_remaining_capacity_ah = remaining_capacity_ah
+            self._baseline_remaining_capacity_ah = current_remaining_capacity_ah
         self._estimated_charge_capacity_ah = round(
             estimated_charge_capacity_ah(
                 cycle_capacity_ah,
-                remaining_capacity_ah,
+                current_remaining_capacity_ah,
                 self._baseline_cycle_capacity_ah,
                 self._baseline_remaining_capacity_ah,
             ),
@@ -471,7 +490,7 @@ class EstimatedChargeEnergySensor(IoTrixEntity, RestoreSensor):
         self._attr_native_value = round(
             estimated_charge_energy_kwh(
                 cycle_capacity_ah,
-                remaining_capacity_ah,
+                current_remaining_capacity_ah,
                 self._baseline_cycle_capacity_ah,
                 self._baseline_remaining_capacity_ah,
             ),
